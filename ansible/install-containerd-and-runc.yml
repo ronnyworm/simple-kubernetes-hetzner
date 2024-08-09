@@ -1,0 +1,40 @@
+---
+- hosts: all
+  become: yes
+  gather_facts: no
+
+  tasks:
+  - name: check if already good
+    shell:
+      systemctl status containerd | grep 'Active:'
+    register: output
+    failed_when: false # <- this, because grep does not return 0 if it didn't match anything
+
+  - name: exit gracefully if already done
+    meta: end_host
+    when: "'active (running)' | string in output.stdout"
+
+  - name: install containerd
+    script:
+      cmd: shell/install-containerd.sh
+
+  - name: install runc
+    script:
+      cmd: shell/install-runc.sh
+
+  - name: Enable and start containerd service
+    systemd:
+      name: containerd
+      enabled: yes
+      state: started
+
+  - name: check if it worked
+    shell:
+      systemctl status containerd | grep 'Active:'
+    register: output
+    failed_when: false # <- this, because grep does not return 0 if it didn't match anything
+
+  - name: fail if it didnt work
+    fail:
+      msg: "no success"
+    when: "'active (running)' | string not in output.stdout"

@@ -1,0 +1,25 @@
+---
+- hosts: all
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: modify kubelet systemd config
+      shell: |
+        internalip=$(ifconfig | grep "inet 10.0.1." | xargs | cut -d' ' -f2)
+        file=/usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+        sed -i "$(grep -n ExecStart= $file | cut -f1 -d: | paste -sd "," -)d" $file
+        echo ExecStart= >> $file
+        echo 'ExecStart=/usr/bin/kubelet $KUBELET_KUBECONFIG_ARGS $KUBELET_CONFIG_ARGS $KUBELET_KUBEADM_ARGS $KUBELET_EXTRA_ARGS --node-ip='$internalip >> $file
+        echo '' >> $file # with this additional newline, it works even better
+
+    - name: reload
+      shell: |
+        systemctl restart kubelet # with error out, all good
+        systemctl daemon-reload
+      failed_when: false
+
+# debugging
+# vi $file
+# systemctl status kubelet --no-pager --full # if you feel like that
+# systemctl status kubelet # if you feel like that

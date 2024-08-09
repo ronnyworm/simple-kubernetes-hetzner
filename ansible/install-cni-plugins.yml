@@ -1,0 +1,30 @@
+---
+- hosts: all
+  become: yes
+  gather_facts: no
+
+  tasks:
+  - name: check if already good
+    shell:
+      ls /opt/cni/bin/host-local 2>&1
+    register: output
+    failed_when: false # <- this, because it might not return 0
+
+  - name: exit gracefully if already done
+    meta: end_host
+    when: "'No such file or directory' | string not in output.stdout"
+
+  - name: install cni plugins
+    script:
+      cmd: shell/install-cni-plugins.sh
+
+  - name: check if it worked
+    shell:
+      ls /opt/cni/bin/host-local 2>&1
+    register: output
+    failed_when: false # <- this, because it might not return 0
+
+  - name: fail if it didnt work
+    fail:
+      msg: "no success"
+    when: "'No such file or directory' | string in output.stdout"

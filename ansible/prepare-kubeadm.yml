@@ -1,0 +1,61 @@
+---
+- hosts: all
+  become: yes
+  gather_facts: no
+  vars:
+    target_version: "1.30"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+    
+    - name: Install necessary packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gpg
+        state: present
+        force_apt_get: yes
+
+    - name: check whether key ring needed
+      shell:
+        cat /etc/apt/sources.list.d/kubernetes.list 2>&1
+      register: output
+      failed_when: false # <- this, because it might not return 0
+
+    - name: make sure keyring folder exists
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        recurse: true
+
+    - name: get keyring if needed
+      script:
+        cmd: "shell/get-keyring.sh '{{ target_version }}'"
+      when: "'kubernetes-apt-keyring.gpg' not in output.stdout"
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install more packages
+      apt:
+        name:
+          - kubelet={{ target_version }}.*
+          - kubeadm={{ target_version }}.*
+          - kubectl={{ target_version }}.*
+        state: present
+        force_apt_get: yes
+
+    - name: mark new packages to be held
+      shell:
+        apt-mark hold kubelet kubeadm kubectl
+
+    - name: Enable and start kubelet service
+      systemd:
+        name: kubelet
+        enabled: yes
+        state: started

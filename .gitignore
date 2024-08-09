@@ -1,0 +1,8 @@
+.DS_Store
+terraform/.terraform.lock.hcl
+.terraform
+terraform.tfstate*
+.env
+.terraform.tfstate.lock.info
+ansible/shell/join.sh
+terraform.tfvars

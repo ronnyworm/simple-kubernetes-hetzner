@@ -1,0 +1,42 @@
+---
+- hosts: all
+  become: yes
+  gather_facts: no
+
+  tasks:
+  - name: check if config already exists
+    shell:
+      ls /etc/containerd/config.toml 2>&1
+    register: outputfile
+    failed_when: false # <- this, because it might not return 0
+
+  - name: check if containerd is running
+    shell:
+      ps -ef | grep -i containerd
+    register: outputrun
+    failed_when: false # <- this, because it might not return 0
+
+  - name: exit gracefully if already done
+    meta: end_host
+    when: "'No such file or directory' not in outputfile.stdout and '/usr/local/bin/containerd' in outputrun.stdout"
+
+  - name: create containerd config
+    script:
+      cmd: shell/create-containerd-config.sh
+
+  - name: check if config already exists
+    shell:
+      ls /etc/containerd/config.toml 2>&1
+    register: outputfile
+    failed_when: false # <- this, because it might not return 0
+
+  - name: check if containerd is running
+    shell:
+      ps -ef | grep -i containerd
+    register: outputrun
+    failed_when: false # <- this, because it might not return 0
+
+  - name: fail if it didnt work
+    fail:
+      msg: "no success"
+    when: "'No such file or directory' in outputfile.stdout or '/usr/local/bin/containerd' not in outputrun.stdout"

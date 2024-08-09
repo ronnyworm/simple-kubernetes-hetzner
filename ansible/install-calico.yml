@@ -1,0 +1,27 @@
+---
+- hosts: all
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: Install helm if not exists
+      unarchive:
+        src: https://get.helm.sh/helm-v3.11.0-linux-amd64.tar.gz
+        dest: /usr/local/bin
+        extra_opts: "--strip-components=1"
+        owner: root
+        group: root
+        mode: 0755
+        remote_src: true
+      args:
+        creates: /usr/local/bin/helm
+
+    - name: add helm repo
+      shell: |
+        helm repo add projectcalico https://docs.tigera.io/calico/charts
+      failed_when: false
+
+    - name: create ns and install calico with helm
+      shell: |
+        KUBECONFIG=/etc/kubernetes/admin.conf  kubectl create namespace tigera-operator
+        KUBECONFIG=/etc/kubernetes/admin.conf  helm install calico projectcalico/tigera-operator --version v3.28.0 --namespace tigera-operator

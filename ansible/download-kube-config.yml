@@ -1,0 +1,11 @@
+---
+- hosts: all
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: download kube config
+      fetch:
+        src: /etc/kubernetes/admin.conf
+        dest: config
+        flat: yes
