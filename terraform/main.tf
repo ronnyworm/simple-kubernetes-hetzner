@@ -8,6 +8,10 @@ resource "hcloud_server" "nodes" {
   firewall_ids = [
     hcloud_firewall.firewall_general.id
   ]
+
+  lifecycle {
+    ignore_changes = [firewall_ids]
+  }
 }
 
 resource "hcloud_firewall_attachment" "fw_all_k8s_nodes" {
